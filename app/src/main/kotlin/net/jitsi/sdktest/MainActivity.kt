@@ -65,8 +65,9 @@ class MainActivity : AppCompatActivity() {
             val options = JitsiMeetConferenceOptions.Builder()
                     .setRoom(text)
                     // Settings for audio and video
-                    //.setAudioMuted(true)
-                    //.setVideoMuted(true)
+                    .setAudioMuted(true)
+                    .setVideoMuted(true)
+                   
                     .build()
             // Launch the new activity with the given options. The launch() method takes care
             // of creating the required Intent and passing the options.
