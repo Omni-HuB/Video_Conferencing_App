@@ -67,7 +67,8 @@ class MainActivity : AppCompatActivity() {
                     // Settings for audio and video
                     .setAudioMuted(true)
                     .setVideoMuted(true)
-                   
+                    .setFeatureFlag("chat.enabled", true)
+                    .setFeatureFlag("invite.enabled", false)
                     .build()
             // Launch the new activity with the given options. The launch() method takes care
             // of creating the required Intent and passing the options.
