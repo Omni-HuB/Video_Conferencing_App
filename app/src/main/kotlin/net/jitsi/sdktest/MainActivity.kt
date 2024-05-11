@@ -43,7 +43,7 @@ class MainActivity : AppCompatActivity() {
                 // Different features flags can be set
                 //.setFeatureFlag("toolbox.enabled", false)
                 //.setFeatureFlag("filmstrip.enabled", false)
-                .setFeatureFlag("welcomepage.enabled", false)
+                .setFeatureFlag("welcomepage.enabled", true)
                 .build()
         JitsiMeet.setDefaultConferenceOptions(defaultOptions)
 
