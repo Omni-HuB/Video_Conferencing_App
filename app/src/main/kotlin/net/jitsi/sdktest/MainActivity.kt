@@ -1,115 +1,71 @@
 package net.jitsi.sdktest
 
-import android.content.BroadcastReceiver
-import android.content.Context
+import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Intent
-import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.os.Bundle
-import android.view.View
-import android.widget.EditText
+import android.view.TextureView
+import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import org.jitsi.meet.sdk.*
-import timber.log.Timber
-import java.net.MalformedURLException
-import java.net.URL
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
 
-    private val broadcastReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            onBroadcastReceived(intent)
-        }
-    }
+    private lateinit var textureView: TextureView
+    private var cameraHelper: CameraHelper? = null
 
+    private val requiredPermissions = arrayOf(
+        Manifest.permission.CAMERA
+    )
+    private val permissionRequestCode = 123
+
+    @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Initialize default options for Jitsi Meet conferences.
-        val serverURL: URL
-        serverURL = try {
-            // When using JaaS, replace "https://meet.jit.si" with the proper serverURL
-            URL("https://meet.jit.si")
-        } catch (e: MalformedURLException) {
-            e.printStackTrace()
-            throw RuntimeException("Invalid server URL!")
+        textureView = findViewById(R.id.textureViews)
+        val button: Button = findViewById(R.id.bottomButton)
+
+        // Check for camera permissions
+        if (allPermissionsGranted()) {
+            startCamera()
+        } else {
+            ActivityCompat.requestPermissions(this, requiredPermissions, permissionRequestCode)
         }
-        val defaultOptions = JitsiMeetConferenceOptions.Builder()
-                .setServerURL(serverURL)
-                // When using JaaS, set the obtained JWT here
-                //.setToken("MyJWT")
 
-                // Different features flags can be set
-                //.setFeatureFlag("toolbox.enabled", false)
-                //.setFeatureFlag("filmstrip.enabled", false)
-                .setFeatureFlag("welcomepage.enabled", true)
-                .build()
-        JitsiMeet.setDefaultConferenceOptions(defaultOptions)
+        button.setOnClickListener {
 
-        registerForBroadcastMessages()
+            startActivity(Intent(this@MainActivity, secondPage::class.java))
+        }
+
     }
 
-    override fun onDestroy() {
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
-        super.onDestroy()
-    }
+    private fun startCamera() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            cameraHelper = CameraHelper(this, textureView, CameraHelper.CameraType.FRONT)
+            cameraHelper?.openCamera()
+        } else {
+            // Handle case where permission is not granted
 
-
-    fun onButtonClick(v: View?) {
-        val editText = findViewById<EditText>(R.id.conferenceName)
-        val text = editText.text.toString()
-        if (text.isNotEmpty()) {
-            // Build options object for joining the conference. The SDK will merge the default
-            // one we set earlier and this one when joining.
-            val options = JitsiMeetConferenceOptions.Builder()
-                    .setRoom(text)
-                    // Settings for audio and video
-                    .setAudioMuted(true)
-                    .setVideoMuted(true)
-                    .setFeatureFlag("chat.enabled", true)
-                    .setFeatureFlag("invite.enabled", false)
-                    .build()
-            // Launch the new activity with the given options. The launch() method takes care
-            // of creating the required Intent and passing the options.
-            JitsiMeetActivity.launch(this, options)
         }
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == permissionRequestCode) {
+            if (allPermissionsGranted()) {
+                startCamera()
+            } else {
+                // Permissions not granted by the user
 
-    private fun registerForBroadcastMessages() {
-        val intentFilter = IntentFilter()
-
-        /* This registers for every possible event sent from JitsiMeetSDK
-           If only some of the events are needed, the for loop can be replaced
-           with individual statements:
-           ex:  intentFilter.addAction(BroadcastEvent.Type.AUDIO_MUTED_CHANGED.action);
-                intentFilter.addAction(BroadcastEvent.Type.CONFERENCE_TERMINATED.action);
-                ... other events
-         */
-        for (type in BroadcastEvent.Type.values()) {
-            intentFilter.addAction(type.action)
-        }
-
-        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, intentFilter)
-    }
-
-    // Example for handling different JitsiMeetSDK events
-    private fun onBroadcastReceived(intent: Intent?) {
-        if (intent != null) {
-            val event = BroadcastEvent(intent)
-            when (event.type) {
-                BroadcastEvent.Type.CONFERENCE_JOINED -> Timber.i("Conference Joined with url%s", event.getData().get("url"))
-                BroadcastEvent.Type.PARTICIPANT_JOINED -> Timber.i("Participant joined%s", event.getData().get("name"))
-                else -> Timber.i("Received event: %s", event.type)
             }
         }
     }
 
-
-    // Example for sending actions to JitsiMeetSDK
-    private fun hangUp() {
-        val hangupBroadcastIntent: Intent = BroadcastIntentHelper.buildHangUpIntent()
-        LocalBroadcastManager.getInstance(this.applicationContext).sendBroadcast(hangupBroadcastIntent)
+    private fun allPermissionsGranted() = requiredPermissions.all {
+        ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
 }
